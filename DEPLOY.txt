@@ -1,0 +1,43 @@
+Porter Catering Reports - Deploy to Render.com
+================================================
+
+This version is ready for Render.com so Gagan can open it on his phone.
+
+Deploy Steps (Free)
+-------------------
+1. Go to https://render.com and sign up (free, use Google or email).
+
+2. Click "New +" → "Web Service".
+
+3. Connect a GitHub account (or use "Public Git repository" / upload).
+   - Easiest: Create a free GitHub repo, upload the porter_catering folder, then connect it.
+   - Or use Render’s manual deploy if available.
+
+4. Settings:
+   - Name: porter-catering (or any name)
+   - Environment: Python
+   - Build Command: pip install -r requirements.txt
+   - Start Command: gunicorn app:app
+   - Instance Type: Free
+
+5. Environment Variables (click Advanced):
+   - Key: EMAIL_PASSWORD
+   - Value: lsqugmsfjrthfzeu
+
+6. Click "Create Web Service".
+
+7. Wait 2–3 minutes. You will get a link like:
+   https://porter-catering.onrender.com
+
+Send that link to Gagan on WhatsApp.
+
+Login
+-----
+Username: gagan
+Password: Aisxx2026
+
+Notes
+-----
+- Free tier sleeps after inactivity (wakes up in ~30 seconds when opened).
+- Photos are stored on the server. On free tier they may reset if the service restarts — fine for testing.
+- Once testing works, we can move to a paid plan or your own server and connect app.aerodromesecurity.com.

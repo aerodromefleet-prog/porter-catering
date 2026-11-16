@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EgyptAir Security Reports</title>
+<style>
+body { font-family: system-ui, sans-serif; margin: 0; background: #f4f6f8; padding: 12px; }
+.header { background: #003366; color: white; padding: 16px; text-align: center; border-radius: 10px; margin-bottom: 16px; }
+.box { background: white; padding: 16px; margin: 12px 0; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+input, textarea { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+button { width: 100%; padding: 16px; background: #0055aa; color: white; border: none; border-radius: 8px; font-size: 17px; margin: 8px 0; }
+.green { background: #007700; }
+.gray { background: #555; }
+.hidden { display: none !important; }
+.small { font-size: 0.9em; color: #555; }
+.row { display: flex; gap: 6px; margin: 6px 0; }
+.row input { flex: 1; padding: 10px; font-size: 15px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h2 style="margin:0">EgyptAir Security Reports</h2>
+  <div id="status" class="small"></div>
+</div>
+
+<!-- LOGIN -->
+<div id="login" class="box">
+  <h3>Guard Login</h3>
+  <input type="text" id="license" placeholder="License Number" value="G123456">
+  <input type="password" id="pin" placeholder="PIN" value="1234">
+  <button onclick="doLogin()">Login</button>
+  <p class="small">Demo login is already filled in</p>
+</div>
+
+<!-- MAIN -->
+<div id="main" class="hidden">
+  <button onclick="showNew()">+ New Flight</button>
+  <div id="flightList"></div>
+  <button class="gray" onclick="doLogout()">Logout</button>
+</div>
+
+<!-- NEW FLIGHT -->
+<div id="newFlight" class="hidden box">
+  <h3>New Flight</h3>
+  <input type="text" id="fNum" placeholder="Flight Number (MS 995)">
+  <input type="date" id="fDate">
+  <input type="text" id="fArr" placeholder="Arrival Gate">
+  <input type="text" id="fDep" placeholder="Departure Gate">
+  <button class="green" onclick="saveFlight()">Create Flight</button>
+  <button class="gray" onclick="showMain()">Cancel</button>
+</div>
+
+<!-- FLIGHT -->
+<div id="flightView" class="hidden">
+  <div class="box">
+    <h3 id="ftitle"></h3>
+    <div id="finfo" class="small"></div>
+    <button onclick="openForm('ramp')">Ramp Report</button>
+    <button onclick="openForm('bagroom')">Bagroom Report</button>
+    <button onclick="openForm('access')">Access / Security</button>
+    <button class="gray" onclick="showMain()">Back to Flights</button>
+  </div>
+  <div id="repList"></div>
+</div>
+
+<!-- FORM -->
+<div id="formView" class="hidden box">
+  <h3 id="formTitle"></h3>
+  <div id="formBody"></div>
+  <button class="green" onclick="saveReport()">Save Report</button>
+  <button class="gray" onclick="backToFlight()">Cancel</button>
+</div>
+
+<!-- VIEW REPORT -->
+<div id="detailView" class="hidden box">
+  <h3 id="detailTitle"></h3>
+  <div id="detailBody"></div>
+  <button class="gray" onclick="backToFlight()">Back</button>
+</div>
+
+<script>
+let guard = null;
+let flightId = null;
+let repType = null;
+let data = JSON.parse(localStorage.getItem('egDB') || '{"flights":[],"reports":[]}');
+
+function save() { localStorage.setItem('egDB', JSON.stringify(data)); }
+
+function doLogin() {
+  const lic = document.getElementById('license').value.trim();
+  const pin = document.getElementById('pin').value.trim();
+  if (lic === 'G123456' && pin === '1234') {
+    guard = lic;
+    document.getElementById('status').innerText = 'Logged in: Demo Guard';
+    showMain();
+  } else {
+    alert('Wrong login. Use the demo values.');
+  }
+}
+
+function doLogout() {
+  guard = null;
+  document.getElementById('status').innerText = '';
+  document.getElementById('login').classList.remove('hidden');
+  document.getElementById('main').classList.add('hidden');
+}
+
+function showMain() {
+  ['login','newFlight','flightView','formView','detailView'].forEach(id => {
+    document.getElementById(id).classList.add('hidden');
+  });
+  document.getElementById('main').classList.remove('hidden');
+  showFlights();
+}
+
+function showNew() {
+  document.getElementById('main').classList.add('hidden');
+  document.getElementById('newFlight').classList.remove('hidden');
+  document.getElementById('fDate').valueAsDate = new Date();
+}
+
+function saveFlight() {
+  const f = {
+    id: Date.now(),
+    num: document.getElementById('fNum').value || 'No number',
+    date: document.getElementById('fDate').value,
+    arr: document.getElementById('fArr').value,
+    dep: document.getElementById('fDep').value
+  };
+  data.flights.push(f);
+  save();
+  openFlight(f.id);
+}
+
+function showFlights() {
+  const el = document.getElementById('flightList');
+  el.innerHTML = '<h3>Your Flights</h3>';
+  if (data.flights.length === 0) {
+    el.innerHTML += '<p>No flights yet. Tap + New Flight above.</p>';
+    return;
+  }
+  data.flights.slice().reverse().forEach(f => {
+    const d = document.createElement('div');
+    d.className = 'box';
+    d.innerHTML = '<strong>' + f.num + '</strong><br><span class="small">' + (f.date||'') + ' | ' + (f.arr||'-') + ' → ' + (f.dep||'-') + '</span>';
+    d.onclick = () => openFlight(f.id);
+    el.appendChild(d);
+  });
+}
+
+function openFlight(id) {
+  flightId = id;
+  const f = data.flights.find(x => x.id == id);
+  ['main','newFlight','formView','detailView'].forEach(i => document.getElementById(i).classList.add('hidden'));
+  document.getElementById('flightView').classList.remove('hidden');
+  document.getElementById('ftitle').innerText = f.num;
+  document.getElementById('finfo').innerText = (f.date||'') + ' | Gates ' + (f.arr||'-') + ' → ' + (f.dep||'-');
+  showReps();
+}
+
+function showReps() {
+  const el = document.getElementById('repList');
+  el.innerHTML = '<h3>Reports (tap to view)</h3>';
+  const list = data.reports.filter(r => r.fid == flightId);
+  if (list.length === 0) {
+    el.innerHTML += '<p class="small">No reports yet.</p>';
+    return;
+  }
+  list.forEach(r => {
+    const d = document.createElement('div');
+    d.className = 'box';
+    d.innerHTML = '<strong>' + r.type.toUpperCase() + '</strong><br><span class="small">' + new Date(r.t).toLocaleString() + '</span>';
+    d.onclick = () => viewRep(r);
+    el.appendChild(d);
+  });
+}
+
+function openForm(type) {
+  repType = type;
+  document.getElementById('flightView').classList.add('hidden');
+  document.getElementById('formView').classList.remove('hidden');
+  const titles = {ramp:'Ramp Area Log', bagroom:'Bagroom Paperwork', access:'Access / Security Report'};
+  document.getElementById('formTitle').innerText = titles[type];
+  let html = '';
+  if (type === 'ramp') {
+    html = `
+      <input placeholder="Chock Time" id="chock">
+      <input placeholder="Front Hold Open" id="fho">
+      <input placeholder="Front Hold Closed" id="fhc">
+      <input placeholder="Back Hold Open" id="bho">
+      <input placeholder="Back Hold Closed" id="bhc">
+      <input placeholder="Push Back" id="pb">
+      <h4>Staff</h4><div id="staffs"></div>
+      <button type="button" onclick="addStaff()">+ Add Staff</button>
+      <textarea id="notes" placeholder="Notes or ULD numbers" rows="3"></textarea>
+    `;
+  } else if (type === 'bagroom') {
+    html = `
+      <h4>Staff</h4><div id="staffs"></div>
+      <button type="button" onclick="addStaff()">+ Add Staff</button>
+      <h4>ULD Carts</h4><div id="carts"></div>
+      <button type="button" onclick="addCart()">+ Add Cart</button>
+    `;
+  } else {
+    html = `
+      <h4>Personnel</h4><div id="people"></div>
+      <button type="button" onclick="addPerson()">+ Add Person</button>
+      <input placeholder="Arrival Time" id="arr">
+      <input placeholder="Chocks On" id="chocks">
+      <input placeholder="Push Back" id="pb">
+      <textarea id="notes" placeholder="Notes / incidents" rows="3"></textarea>
+    `;
+  }
+  document.getElementById('formBody').innerHTML = html;
+  if (type !== 'bagroom') addStaff();
+  if (type === 'bagroom') { addStaff(); addCart(); }
+  if (type === 'access') addPerson();
+}
+
+function addStaff() {
+  const d = document.createElement('div');
+  d.className = 'row';
+  d.innerHTML = '<input placeholder="Company"><input placeholder="RAIC"><input placeholder="Name">';
+  document.getElementById('staffs').appendChild(d);
+}
+function addCart() {
+  const d = document.createElement('div');
+  d.className = 'row';
+  d.innerHTML = '<input placeholder="Cart #"><input placeholder="Bags" type="number"><input placeholder="Time Left">';
+  document.getElementById('carts').appendChild(d);
+}
+function addPerson() {
+  const d = document.createElement('div');
+  d.className = 'row';
+  d.innerHTML = '<input placeholder="RAIC"><input placeholder="Name"><input placeholder="Company"><input placeholder="In"><input placeholder="Out">';
+  document.getElementById('people').appendChild(d);
+}
+
+function saveReport() {
+  const r = { type: repType, t: Date.now(), fid: flightId, fields: {}, rows: [], notes: '' };
+  ['chock','fho','fhc','bho','bhc','pb','arr','chocks','notes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value) {
+      if (id === 'notes') r.notes = el.value;
+      else r.fields[id] = el.value;
+    }
+  });
+  document.querySelectorAll('.row').forEach(row => {
+    const vals = [...row.querySelectorAll('input')].map(i => i.value).filter(Boolean);
+    if (vals.length) r.rows.push(vals);
+  });
+  data.reports.push(r);
+  save();
+  alert('Saved!');
+  backToFlight();
+}
+
+function viewRep(r) {
+  document.getElementById('flightView').classList.add('hidden');
+  document.getElementById('detailView').classList.remove('hidden');
+  document.getElementById('detailTitle').innerText = r.type.toUpperCase();
+  let h = '<p class="small">' + new Date(r.t).toLocaleString() + '</p>';
+  for (const [k,v] of Object.entries(r.fields||{})) h += '<p><b>' + k + ':</b> ' + v + '</p>';
+  if (r.rows && r.rows.length) {
+    h += '<h4>Entries</h4>';
+    r.rows.forEach(row => h += '<p class="small">' + row.join(' | ') + '</p>');
+  }
+  if (r.notes) h += '<p><b>Notes:</b> ' + r.notes + '</p>';
+  document.getElementById('detailBody').innerHTML = h;
+}
+
+function backToFlight() {
+  document.getElementById('formView').classList.add('hidden');
+  document.getElementById('detailView').classList.add('hidden');
+  document.getElementById('flightView').classList.remove('hidden');
+  showReps();
+}
+</script>
+</body>
+</html>
