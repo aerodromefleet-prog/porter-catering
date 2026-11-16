@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Catering Flight</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <a href="/dashboard">← Back</a>
+        <div>New Flight</div>
+    </header>
+    <div class="container">
+        <form method="post" enctype="multipart/form-data">
+            <label>Flight Number</label>
+            <input type="text" name="flight_number" required placeholder="e.g. PD 123">
+
+            <label>Date</label>
+            <input type="date" name="date" required>
+
+            <label>Time</label>
+            <input type="time" name="time" required>
+
+            <label>Guard Name</label>
+            <input type="text" name="guard_name" value="{{ name }}" required>
+
+            <label>Security License Number</label>
+            <input type="text" name="license_number" value="{{ license }}" placeholder="Enter license number">
+
+            <label>Notes (optional)</label>
+            <textarea name="notes" rows="2" placeholder="Any remarks"></textarea>
+
+            <label>Photos (documents + seals)</label>
+            <input type="file" name="photos" accept="image/*" multiple capture="environment" required>
+            <p class="hint">You can select multiple photos at once. Aim for 16–20.</p>
+
+            <button type="submit" class="btn big green">Save Flight & Photos</button>
+        </form>
+    </div>
+</body>
+</html>
